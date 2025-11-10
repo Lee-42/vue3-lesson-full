@@ -24,28 +24,32 @@
         // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
         // import { h, Text, render, Fragment } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
         import { render, h, Text, Fragment } from '/packages/runtime-dom/dist/runtime-dom.js'
+        const AsyncComponent = import('./asyncComponent.js')
 
-        // 如果在编写vue3的时候, 你直接采用jsx或者h的写法, 得不到优化
-        const MyComponent = {
-            setup() {
-                const state = reactive({ name: "jw" })
-                return {
-                    ...toRefs(state)
-                }
+        // const MyComponent = defineAsyncComponent(() => {
+        //     return AsyncComponent
+        // })
+
+        const MyComponent = defineAsyncComponent({
+            loader: () => {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        reject({
+                            render: () => {
+                                return h('div', 'hello')
+                            }
+                        })
+                    }, 3000)
+                })
             },
-            render(_ctx) {
-                const vnode = (
-                    _openBlock(),
-                    _createELemeneBlock("div", null, [
-                        _createElementVNode("h1", null, "Hello Lee42"),
-                        _createElementVNode("span", null, _toDisplayString(_ctx.name),
-                            1 /* TEXT */
-                        )
-                    ])
-                )
-                return vnode
+            timeout: 1000,
+            delay: 500,
+            errorComponent: {
+                render: () => {
+                    return h('div', 'error~~~~~')
+                }
             }
-        }
+        })
 
         render(h(MyComponent), app)
 

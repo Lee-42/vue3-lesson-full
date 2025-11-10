@@ -127,14 +127,15 @@ export function createRenderer(renderOptions) {
       vnode,
       parentComponent
     ));
-    if(isKeepAlive(vnode)){
+    if (isKeepAlive(vnode)) {
       instance.ctx.renderer = {
         createElement: hostCreateElement, // 内部需要创建一个div来缓存dom
-        move(vnode, container){ // 需要把之前渲染的dom放入到容器中
-          hostInsert(vnode.component.subTree.el, container)
+        move(vnode, container) {
+          // 需要把之前渲染的dom放入到容器中
+          hostInsert(vnode.component.subTree.el, container);
         },
         unmount, // 如果组件切换需要将现在容器中的元素移除
-      }
+      };
     }
     // 2. 给实例的属性赋值
     setupComponent(instance);
@@ -196,9 +197,13 @@ export function createRenderer(renderOptions) {
     }
   };
 
-  const processComponent = (n1, n2, container, anchor) => {
+  const processComponent = (n1, n2, container, anchor, parentComponent) => {
     if (n1 === null) {
-      mountComponent(n2, container, anchor);
+      if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+        parentComponent.ctx.activated(n2, container, anchor);
+      } else {
+        mountComponent(n2, container, anchor);
+      }
     } else {
       // 组件更新逻辑
       // n1.component.props.address = "上海"
@@ -397,10 +402,39 @@ export function createRenderer(renderOptions) {
     let oldProps = n1.props || {};
     let newProps = n2.props || {};
 
-    patchProps(oldProps, newProps, el);
+    // 在比较元素的时候, 针对某个熟悉来去比较
+    const { patchFlag, dynamicProps } = n2;
+    if (patchFlag) {
+      if (patchFlag & patchFlag.TEXT) {
+        // 只要儿子是动态的只比较文本
+        if (n1.children !== n2.children) {
+          hostSetElementText(el, n2.children);
+        }
+      }
+      if (patchFlag & patchFlag.STYLE) {
+        //
+      }
+      if (patchFlag & patchFlag.CLASS) {
+      }
+    } else {
+      patchProps(oldProps, newProps, el);
+    }
 
-    patchChildren(n1, n2, el);
+    if (dynamicProps) {
+      // 线性比对
+      patchBlockChildren(n1, n2, el, anchor, parentComponent);
+    } else {
+      // 全量diff
+      patchChildren(n1, n2, el);
+    }
   };
+
+  function patchBlockChildren(n1, n2, el, anchor, parentComponent) {
+    for (let i = 0; i < n2.dynamicChildren.length; i++) {
+      const child = n2.dynamicChildren[i];
+      patch(n1, child, el, anchor, parentComponent);
+    }
+  }
 
   const patchProps = (oldProps, newProps, el) => {
     // 新的要全部生效

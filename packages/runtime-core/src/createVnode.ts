@@ -13,7 +13,7 @@ export function isSameVnode(n1, n2) {
   return n1.type === n2.type && n1.key === n2.key;
 }
 
-export function createVnode(type, props, children?) {
+export function createVnode(type, props, children?, patchFlag?) {
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT // 元素组件 div、span...
     : isTeleport(type)
@@ -44,3 +44,22 @@ export function createVnode(type, props, children?) {
   }
   return vnode;
 }
+
+let currentBlock = null;
+export function openBlock() {
+  currentBlock = []
+}
+export function closeBlock() {
+  currentBlock = null;
+}
+
+export function setupBlock(vnode) {
+  vnode.dynamicChildren = currentBlock // 当前elementBlock会收集子节点, 用当前block来收集
+}
+
+// block有收集虚拟节点的功能
+export function createElementBlock(type, props, children, patchFlag?) {
+  return setupBlock(createVnode(type, props, children, patchFlag));
+}
+
+export { createVnode as _createElementVNode }
