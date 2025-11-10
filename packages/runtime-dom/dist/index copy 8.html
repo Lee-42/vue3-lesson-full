@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { h, Text, render, Fragment } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+        import { render, h, Text, Fragment } from '/packages/runtime-dom/dist/runtime-dom.js'
+
+        const RenderComponent = {
+            setup(props, { emit, attrs, expose, slots }) {
+                return {
+                    render(props) {
+                        console.log(proxy.$slots)
+                        return h(Fragment, [proxy.$slots.header('hhhh'), proxy.$slots.footer('ffff')], "abcd")
+                    },
+                }
+            }
+        }
+
+        const VueComponent = {
+            setup(props, { emit, attrs, expose, slots }) {
+                console.log('expose: ', expose)
+                return (proxy) => {
+                    return h("button", { onClick: () => emit('myEvent', 100) }, "点击我")
+                }
+            }
+        }
+
+        // 给组件绑定事件
+        render(VueComponent, { onMyEvent: (value) => alert(value) }, app)
+        // 组件卸载
+        setTimeout(() => {
+            render(h(null), { onMyEvent: (value) => alert(value) }, app);
+        }, 1000)
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { h, Text, render, Fragment } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+        import { render, h, Text, Fragment } from '/packages/runtime-dom/dist/runtime-dom.js'
+
+        const P3 = {
+            setup(props) {
+                const name = inject('name')
+                const age = inject('age', 30)
+                return () => {
+                    return h('div', [name.value, age])
+                }
+            }
+        }
+        const P2 = {
+            render() {
+                return h(P3)
+            }
+        }
+        const P1 = {
+            setup(props) {
+                const name = ref("lee")
+                setTimeout(() => {
+                    name.value = "jack"
+                }, 3000)
+                provide('name', name);
+                // 在父组件中提供数据, 后代组件中获取数据
+                console.log(inject('name')) // 不能自己拿自己
+                return () => h(P2)
+            }
+        }
+        // 将p1的provide给p2
+        // p2再将provide给p3
+        // 把上一级的赋给自己
+        // p1 ——> p2 ——> p3
+         const app = document.querySelector('#app')
+        render(h(P1), app)
+    </script>
+</body>
+
+</html>

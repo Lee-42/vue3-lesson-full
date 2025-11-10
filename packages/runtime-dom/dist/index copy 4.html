@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { h, Text, render, Fragment } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+        import { render, h, Text, Fragment } from '/packages/runtime-dom/dist/runtime-dom.js'
+
+        // 这就是一个vue组件
+        // 属性attrs(非响应式的), props(响应式的)
+        // 所有属性 减去 propsOptions = attrs 
+        const VueComponent = {
+            props: {
+                name: String,
+                age: Number
+            },
+            render(proxy) {
+                console.log(proxy)
+                return h(Fragment, [
+                    h(Text, "my name is " + proxy.name),
+                    h("a", proxy.$attrs.b)
+                ])
+            }
+        }
+        // 模板就是render函数
+        // 组件由两个虚拟节点组成, h(VueComponent) = vnode 产生的是组件内的虚拟节点
+        // render函数返回的虚拟节点, 这个虚拟节点才是最终要渲染的内容 = subTree
+        render(h(VueComponent, { a: 1, b: 2, name: 'lee', age: 23 }), app)
+    </script>
+</body>
+
+</html>

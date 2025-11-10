@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { h, Text, render, Fragment } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+        import { render, h, Text, Fragment } from '/packages/runtime-dom/dist/runtime-dom.js'
+
+        // 父初始化 ——> 子初始化 ——> 父完成 
+        const VueComponent = {
+            setup(props, { emit, expose, slots, attrs }) {
+                console.log('setup')
+                // instance -> 钩子关联在一起, 在特定的时机调用
+                onBeforeMount(() => {
+                    console.log('beforemount')
+                });
+                onMounted(() => {
+                    console.log('mounted')
+                });
+                onBeforeUpdate(() => {
+                    console.log('onBeforeUpdate')
+                })
+                onUpdated(() => {
+                    console.log('updated')
+                })
+
+                const val = ref('a')
+
+                setTimeout(() => {
+                    val.value = 'b'
+                })
+
+                return () => {
+                    return h('div', val.value)
+                }
+            },
+        }
+
+        render(h(VueComponent), app)
+
+    </script>
+</body>
+
+</html>

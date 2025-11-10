@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { h, Text, render, Fragment } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+        import { render, h, Text, Fragment } from '/packages/runtime-dom/dist/runtime-dom.js'
+
+        const VueComponent = {
+            render(props) {
+                return h("div", "abcd")
+            },
+            // setup优先级更高
+            setup(props, { emit, attrs, expose, slots }) {
+                // 提供渲染逻辑
+                // 情况一: 返回渲染函数
+                return () => {
+                    return h("div", "abcd")
+                }
+                // 情况二: 返回状态对象, 可以在render的props拿到
+                // return {
+                //     a: 1
+                // }
+            }
+        }
+    </script>
+</body>
+
+</html>

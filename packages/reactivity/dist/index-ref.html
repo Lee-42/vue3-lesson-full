@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // 这两个api就可以解决视图和数据80%的问题了
+        // import { ref } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        import { ref, effect } from '/packages/reactivity/dist/reactivity.js'
+
+        const flag = ref(false); // 其实是包装成对象wrap(false) => 
+        console.log(flag)
+        // let flag1 = {
+        //     _v: false,
+        //     get value() {
+        //         return this._v
+        //     },
+        //     set value(newValue) {
+        //         this._v = newValue
+        //     }
+        // }
+        effect(() => {
+            app.innerHTML = flag.value ? 'lee' : 30
+        })
+        setTimeout(() => {
+            flag.value = true
+        }, 1000)
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { h } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+        import { renderOptions, render, h } from '/packages/runtime-dom/dist/runtime-dom.js'
+        // runtime-dom的作用就是提供DOM API(提供一系列dom操作的api方法)
+        //  平时使用的Vue包其实就是 runtime-dom 包
+        // 0.runtime-dom ——> runtime-core ——> reactivity
+        // 1.createRender 我们可以自己创建渲染器(让我们自己提供渲染的方式)
+        // 2.render用内置的渲染器来进行渲染(渲染dom元素)
+        // 3.h方法可以创建一个虚拟dom 
+        let ele1 = h('div', [h('span', 'hello'), h('span', 'world')])
+        // let ele1 = h('div', { style: { 'color': 'red' }, onClick: () => alert('click') }, "lee")
+        let ele2 = h('div', { style: { 'color': 'green' }, onClick: () => alert('click') }, "lee")
+
+
+        // h函数的参数特点
+        // 1.两个参数, 第二个参数可能是属性, 或者虚拟节点(__v_isVnode)
+        // 2.第二个参数就是一个数组 ——> 儿子
+        // 3.其他情况就是属性
+        // 4.直接传递非对象的, 文本
+        // 5.不能出现第三个参数的时候第二个只能是属性
+        // 6.如果超过三个参数, 后面的都是儿子
+        render(ele1, app)
+        setTimeout(() => {
+            render(ele2, app)
+        }, 2000)
+
+        // const renderer = createRenderer(renderOptions)
+        // renderer.render(ele, app)
+    </script>
+</body>
+
+</html>

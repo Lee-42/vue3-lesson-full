@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { h, Text, render, Fragment } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+        import { render, h, Text, Fragment } from '/packages/runtime-dom/dist/runtime-dom.js'
+
+        const RenderComponent = {
+            props: {
+                address: String
+            },
+            render() {
+                return h('div', {}, `地址是:${this.address}`)
+            }
+        };
+
+        // 组件更新有三种方式, 状态、属性(props)、插槽(slots)
+        const VueComponent = {
+            data() {
+                return {
+                    flag: true
+                }
+            },
+            props: {
+                name: String,
+                age: Number
+            },
+            render(proxy) {
+                return h(Fragment, null, [
+                    h('button', {
+                        onClick: () => (this.flag)
+                    }, "点击"),
+                    h(RenderComponent, { address: this.flag ? "北京" : "上海" })
+                ])
+            }
+        }
+        render(h(VueComponent, { a: 1, b: 2, name: 'lee', age: 23 }), app)
+    </script>
+</body>
+
+</html>

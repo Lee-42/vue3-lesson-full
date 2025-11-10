@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // 这两个api就可以解决视图和数据80%的问题了
+        // import { ref, reactive, toRef, toRefs, proxyRefs } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        import { ref, reactive, toRef, toRefs, proxyRefs } from '/packages/reactivity/dist/reactivity.js'
+
+        let state = reactive({ name: "lee", age: 23 })
+        console.log(state)
+        // toRef: 也可以基于响应式对象上的一个属性，创建一个对应的 ref。
+        // let name = toRef(state, 'name')
+        // let age = toRef(state, 'age')
+        let { name, age } = toRefs(state)
+        console.log(name.value)
+        console.log(age.value)
+
+
+        let proxy = proxyRefs({...toRefs(state)})
+        console.log(proxy.name, proxy.age)
+
+    </script>
+</body>
+
+</html>

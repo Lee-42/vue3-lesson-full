@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // 这两个api就可以解决视图和数据80%的问题了
+        import { reactive, effect } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { reactive, effect } from '/packages/reactivity/dist/reactivity.js'
+
+        // 1. reactive让数据变成响应式的
+        const obj = { name: 'lee', age: 23, flag: true, address: { city: "广州" } }
+        const state = reactive(obj)
+        const state1 = reactive(obj)
+        const state2 = reactive(state)
+        // state、state1、state2应该相等
+        console.log(state.name, state.age)
+
+
+
+        // 2.effect 副作用, 数据变化后可以让effect重新执行。 组件、watch、computed都是基于effect实现的
+        // effect默认会执行一次
+
+        // {obj: {flag: {effect}, name:{effect}}}
+        // {obj: {flag: {effect}, name:{effect}, age: {effect}}}
+        let runner = effect(() => {
+            app.innerHTML = state.flag ? state.name : state.age
+        }, {
+            scheduler: () => {
+                console.log('数据更新了, 不重新渲染, 走自己的逻辑')
+                // AOP编程
+                runner()
+            }
+        })
+
+        effect(() => {
+            app.innerHTML = state.address.city
+        })
+
+        setTimeout(() => {
+            state.address.city = "深圳"
+        }, 1000)
+    </script>
+</body>
+
+</html>

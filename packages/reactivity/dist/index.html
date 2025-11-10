@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        // 这两个api就可以解决视图和数据80%的问题了
+        import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+        // import { ref, reactive, toRef, toRefs, proxyRefs, computed, effect, watch, watchEffect } from '/packages/reactivity/dist/reactivity.js'
+
+        const state = reactive({ name: "lee", age: 30, address: { n: 1 } })
+        const unwatch = watch(
+            state,
+            () => state.name,
+            function (oldVal, newVal) {
+                console.log(oldVal, newVal)
+            }, {
+            deep: false
+        })
+
+        unwatch() // 停止watch 
+
+        setTimeout(() => {
+            state.name = "cool lee"
+        }, 3000)
+
+    </script>
+</body>
+
+</html>
