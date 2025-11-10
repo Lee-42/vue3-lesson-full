@@ -1,9 +1,10 @@
 import { ShapeFlags, hadOwn } from "@vue/shared";
-import { Fragment, isSameVnode, Text } from "./createVnode";
+import { createVnode, Fragment, isSameVnode, Text } from "./createVnode";
 import getSequence from "./seq";
 import { queueJob } from "./scheduler";
 import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { createComponentInstance, setupComponent } from "./component";
+import { h, invokeArray, isKeepAlive } from "@vue/runtime-dom";
 
 export function createRenderer(renderOptions) {
   // 这里的renderOptions不一定是dom相关的方法, vue这里给加上了host前缀
@@ -18,17 +19,26 @@ export function createRenderer(renderOptions) {
     patchProp: hostPatchProp,
   } = renderOptions;
 
-  const mountChildren = (children, container) => {
+  const normalize = (children) => {
     for (let i = 0; i < children.length; i++) {
-      patch(null, children[i], container);
+      if (typeof children[i] === "string" || typeof children[i] === "number") {
+        children[i] = createVnode(Text, null, String(children[i]));
+      }
     }
   };
 
-  const processElement = (n1, n2, container, anchor) => {
+  const mountChildren = (children, container, parentComponent) => {
+    normalize(children);
+    for (let i = 0; i < children.length; i++) {
+      patch(null, children[i], container, parentComponent);
+    }
+  };
+
+  const processElement = (n1, n2, container, anchor, parentComponent) => {
     if (n1 === null) {
-      mountElement(n2, container, anchor); // 初次渲染
+      mountElement(n2, container, anchor, parentComponent); // 初次渲染
     } else {
-      patchElement(n1, n2, container);
+      patchElement(n1, n2, container, anchor, parentComponent);
     }
   };
 
@@ -52,17 +62,53 @@ export function createRenderer(renderOptions) {
     instance.props = reactive(props);
   };
 
+  function updateComponentPreRender(instance, next) {
+    instance.next = null;
+    instance.vnode = next;
+    updateProps(instance, instance.vnode.props, next.props);
+    // 这里还可以更新插槽
+    Object.assign(instance.slots, next.children);
+  }
+
+  function renderComponent(instance) {
+    const { render, vnode, proxy, props, attrs, slots } = instance;
+    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      render.call(proxy, proxy);
+    } else {
+      vnode.type(attrs, { slots });
+    }
+  }
+
   function setupRenderEffect(instance, container, anchor) {
-    const { render } = instance
+    const { render } = instance;
     const componentUpdateFn = () => {
+      const { bm, m } = instance;
       // 我们要在这里面区分, 是第一次还是之后的
       if (!instance.isMounted) {
+        if (bm) {
+          invokeArray(bm);
+        }
+
         const subTree = render.call(instance.proxy, instance.proxy);
         patch(null, subTree, container, anchor);
         instance.isMounted = true;
         instance.subTree = subTree;
+
+        if (m) {
+          invokeArray(m);
+        }
       } else {
         // 基于状态的组件更新
+        const { next, bu, u } = instance;
+        if (next) {
+          // 更新属性和插槽
+          updateComponentPreRender(instance, next);
+          instance.next = null;
+        }
+        if (bu) {
+          invokeArray(bu);
+        }
+
         const subTree = render.call(instance.proxy, instance.proxy);
         patch(instance.subTree, subTree, container, anchor);
         instance.subTree = subTree;
@@ -75,13 +121,79 @@ export function createRenderer(renderOptions) {
     update();
   }
 
-  const mountComponent = (vnode, container, anchor) => {
+  const mountComponent = (vnode, container, anchor, parentComponent) => {
     // 1. 先创建组件实例
-    const instance = (vnode.component = createComponentInstance(vnode));
+    const instance = (vnode.component = createComponentInstance(
+      vnode,
+      parentComponent
+    ));
+    if(isKeepAlive(vnode)){
+      instance.ctx.renderer = {
+        createElement: hostCreateElement, // 内部需要创建一个div来缓存dom
+        move(vnode, container){ // 需要把之前渲染的dom放入到容器中
+          hostInsert(vnode.component.subTree.el, container)
+        },
+        unmount, // 如果组件切换需要将现在容器中的元素移除
+      }
+    }
     // 2. 给实例的属性赋值
-    setupComponent(instance)
+    setupComponent(instance);
     // 3. 创建一个effect
-    setupRenderEffect(instance, container, anchor)
+    setupRenderEffect(instance, container, anchor);
+  };
+
+  const hasPropsChanged = (prevProps, nextProps) => {
+    const nextKeys = Object.keys(nextProps);
+    if (nextKeys.length !== Object.keys(prevProps).length) {
+      return true;
+    }
+    for (let i = 0; i < nextKeys.length; i++) {
+      const key = nextKeys[i];
+      if (nextProps[key] !== prevProps[key]) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const updateProps = (instance, prevProps, nextProps) => {
+    if (hasPropsChanged(prevProps, nextProps)) {
+      // 用新的覆盖掉所有老的
+      for (let key in nextProps) {
+        instance.props[key] = nextProps[key];
+      }
+      // 删除老的多余的
+      for (let key in instance.props) {
+        if (!(key in nextProps)) {
+          delete instance.props[key];
+        }
+      }
+    }
+  };
+
+  const shouldComponentUpdate = (n1, n2) => {
+    const { props: prevProps, children: prevChildren } = n1;
+    const { props: nextProps, children: nextChildren } = n2;
+    if (prevChildren || nextChildren) return true; /// 有插槽直接走重新渲染即可
+    if (prevProps === nextProps) return false;
+    // 如果属性不一致则更新
+    return hasPropsChanged(prevProps || {}, nextProps || {});
+  };
+
+  const updateComponent = (n1, n2) => {
+    const instance = (n2.component = n1.component); // 复用组件的实例
+    // 更新属性
+    // const { props: prevProps } = n1;
+    // const { props: nextProps } = n2;
+    // updateProps(instance, prevProps, nextProps); // 还可能有children
+
+    if (shouldComponentUpdate(n1, n2)) {
+      instance.next = n2; // 用于更新属性, 如果调用update的时候有next属性, 说明是属性更新, 插槽更新
+      instance.update(); // 触发更新, 让更新逻辑统一
+    } else {
+      n2.el = n1.el;
+      instance.vnode = n2;
+    }
   };
 
   const processComponent = (n1, n2, container, anchor) => {
@@ -89,6 +201,8 @@ export function createRenderer(renderOptions) {
       mountComponent(n2, container, anchor);
     } else {
       // 组件更新逻辑
+      // n1.component.props.address = "上海"
+      updateComponent(n1, n2);
     }
   };
 
@@ -107,7 +221,7 @@ export function createRenderer(renderOptions) {
 
   const processFragment = (n1, n2, container) => {
     if (n1 === null) {
-      mountChildren(n2.children, container);
+      mountChildren(n2.children, container, parentComponent);
     } else {
       patchChildren(n1, n2, container);
     }
@@ -270,13 +384,13 @@ export function createRenderer(renderOptions) {
         }
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           // 情况六
-          mountChildren(c2, el);
+          mountChildren(c2, el, parentComponent);
         }
       }
     }
   };
 
-  const patchElement = (n1, n2, container) => {
+  const patchElement = (n1, n2, container, anchor, parentComponent) => {
     // 1.比较元素的差异, 肯定需要复用dom元素
     // 2.比较属性和元素的子节点
     let el = (n2.el = n1.el); // 对dom元素的复用
@@ -301,8 +415,8 @@ export function createRenderer(renderOptions) {
     }
   };
 
-  const mountElement = (vnode, container, anchor) => {
-    const { type, children, props, shapeFlag } = vnode;
+  const mountElement = (vnode, container, anchor, parentComponent) => {
+    const { type, children, props, shapeFlag, transition } = vnode;
     // 第一次渲染的时候我们让虚拟节点和真实节点的dom创建关联 vnode.el = 真实dom
     // 第二次渲染的新的vnode, 可以和上一次的vnode做比对, 之后更新对应的el元素, 可以后续再复用这个dom元素
     let el = (vnode.el = hostCreateElement(type));
@@ -314,20 +428,37 @@ export function createRenderer(renderOptions) {
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, children);
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(children, el);
+      mountChildren(children, el, parentComponent);
+    }
+    if (transition) {
+      transition.beforeEnter(el);
     }
     hostInsert(el, container, anchor);
+    if (transition) {
+      transition.enter(el);
+    }
   };
 
   const unmount = (vnode) => {
+    const { shapeFlag, transition, el } = vnode;
+    const performRemove = () => hostRemove(vnode.el);
     if (vnode.type === Fragment) {
       unmountChildren(vnode.children);
+    } else if (shapeFlag && ShapeFlags.COMPONENT) {
+      // 组件的卸载逻辑
+      unmount(vnode.component.subTree);
+    } else if (shapeFlag && ShapeFlags.TELEPORT) {
+      vnode.type.remove(vnode, unmountChildren);
     } else {
-      hostRemove(vnode.el);
+      if (transition) {
+        transition.leave(el, performRemove);
+      } else {
+        performRemove();
+      }
     }
   };
 
-  const patch = (n1, n2, container, anchor = null) => {
+  const patch = (n1, n2, container, anchor = null, parentComponent = null) => {
     if (n1 === n2) {
       return; // 两次渲染同一个元素直接跳过
     }
@@ -345,7 +476,21 @@ export function createRenderer(renderOptions) {
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(n1, n2, container, anchor);
+          processElement(n1, n2, container, anchor, parentComponent);
+        } else if (shapeFlag & ShapeFlags.TELEPORT) {
+          // teleport 组件的处理逻辑
+          type.process(n1, n2, container, anchor, parentComponent, {
+            mountChildren,
+            patchChildren,
+            move(vnode, container, anchor) {
+              // 此方法可以将组件或者dom元素移动到指定位置
+              hostInsert(
+                vnode.component ? vnode.component.subTree.el : vnode.el,
+                container,
+                anchor
+              );
+            },
+          });
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(n1, n2, container, anchor);
         }
