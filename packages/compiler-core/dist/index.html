@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script type="module">
+        // 一般在过程化中使用, 因为运行时, 对性能有要求
+        import { compile } from '/packages/compiler-core/dist/compiler-core.js'
+
+        console.log(compile('<div>hello</div>'))
+    </script>
+</body>
+</html>
